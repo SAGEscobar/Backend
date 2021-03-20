@@ -6,6 +6,7 @@ var fs = require('fs');
 var path = require('path');
 const article = require('../models/article');
 var Article = require('../models/article');
+const { exists } = require('../models/article');
 
 var controller = {
 
@@ -28,6 +29,7 @@ var controller = {
         // Obtener Parametros
         var params = req.body;
         // Validar Datos
+
         try{
             var validateTitle = !validator.isEmpty(params.title);
             var validateContent = !validator.isEmpty(params.content);
@@ -257,6 +259,52 @@ var controller = {
            
 
         }
+    },
+
+    getImage: (req, res)=>{
+        var file = req.params.image;
+        var path_file = './upload/artcles'+file;
+
+        fs.exists(path_file, (exists)=>{
+            if(exists){
+                return res.sendFile(path.resolve(path_file));
+            }else{
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'La imagen solicitada no existe'
+                });
+            }
+        })
+    },
+
+    search: (req, res)=>{
+        var searchString = req.params.search;
+
+        Article.find({"$or": [
+            {"title": {"$regex": searchString, "$options": "i"}},
+            {"content": {"$regex": searchString, "$options": "i"}}
+        ]})
+        .sort([['date', 'descending']])
+        .exec((err, articles)=>{
+            if(err){
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Se ha producido un error'
+                });
+            }
+
+            if(!articles){
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No se han encontrado coincidencias'
+                });
+            }
+
+            return res.status(200).send({
+                status: 'succes',
+                articles
+            });
+        });
     }
 
 }; // End Controller Article
